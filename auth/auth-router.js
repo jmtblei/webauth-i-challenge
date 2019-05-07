@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const userdb = require('../users/users-model');
 const bcrypt = require('bcryptjs');
-const protected = require('../auth/protected-mw');
 
 router.post('/register', (req, res) => {
     let user = req.body;
@@ -10,7 +9,6 @@ router.post('/register', (req, res) => {
 
     userdb.add(user)
         .then(saved => {
-            console.log(saved)
             res.status(201).json(saved);
         })
         .catch(error => {
@@ -24,6 +22,7 @@ router.post('/login', (req, res) => {
         .first()
         .then(user => {
             if (user && bcrypt.compareSync(password, user.password)) {
+                req.session.username = user.username;
                 res.status(200).json({ message: `Hello ${user.username}!` });
               } else {
                 res.status(401).json({ message: 'Invalid Credentials' });
@@ -32,14 +31,19 @@ router.post('/login', (req, res) => {
         .catch(error => {
             res.status(500).json(error);
         });
-})
+});
 
-router.get('/users', protected, (req, res) => {
-    userdb.find()
-      .then(users => {
-        res.json(users);
-      })
-      .catch(err => res.send(err));
-  });
+router.get('/logout', (req, res) => {
+    const username = req.session.username;
+    if (req.session) {
+      req.session.destroy(err => {
+        if (err) {
+          res.send(`You're here forever....`);
+        } else {
+          res.send(`Goodbye ${username}`)
+        }
+      });
+    }
+});
 
 module.exports = router;
